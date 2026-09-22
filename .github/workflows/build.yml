@@ -14,15 +14,17 @@ jobs:
     container: ghcr.io/cognipilot/cognipilot-workspace:latest
     env:
       CMAKE_PREFIX_PATH: /opt/toolchains
+      CCACHE_DIR: /ccache
     steps:
-      - name: Set path
-        run: |
-          echo "/github/home/.local/bin" >> $GITHUB_PATH
-
       - name: Checkout
         uses: actions/checkout@v6
         with:
           path: cerebri
+
+      - name: Install build dependencies
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq ccache
 
       - name: Cache west modules
         uses: actions/cache@v4
@@ -49,6 +51,7 @@ jobs:
       - name: Initialize
         working-directory: cerebri
         run: |
+          export PATH="/github/home/.local/bin:$PATH"
           west init -l .
           west update
           ./scripts/cyecca_install
@@ -56,11 +59,13 @@ jobs:
       - name: Format Check
         working-directory: cerebri
         run: |
+          export PATH="/github/home/.local/bin:$PATH"
           west format -c
 
       - name: Twister Tests
         working-directory: cerebri
         run: |
+          export PATH="/github/home/.local/bin:$PATH"
           west test
 
       - name: Show ccache stats
@@ -73,10 +78,6 @@ jobs:
     env:
       CMAKE_PREFIX_PATH: /opt/toolchains
     steps:
-      - name: Set path
-        run: |
-          echo "/github/home/.local/bin" >> $GITHUB_PATH
-
       - name: Checkout
         uses: actions/checkout@v6
         with:
@@ -97,6 +98,7 @@ jobs:
       - name: Initialize
         working-directory: cerebri
         run: |
+          export PATH="/github/home/.local/bin:$PATH"
           west init -l .
           west update
           ./scripts/cyecca_install
@@ -107,6 +109,7 @@ jobs:
       - name: Build compile_commands.json (mr_canhubk3/s32k344, app/b3rb)
         working-directory: cerebri
         run: |
+          export PATH="/github/home/.local/bin:$PATH"
           west build -p always -b mr_canhubk3/s32k344 app/b3rb \
             -- -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
