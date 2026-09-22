@@ -25,6 +25,8 @@ jobs:
         run: |
           apt-get update -qq
           apt-get install -y -qq ccache
+          echo "/usr/bin" >> "$GITHUB_PATH"
+          test -x /usr/bin/ccache
 
       - name: Cache west modules
         uses: actions/cache@v4
@@ -70,7 +72,12 @@ jobs:
 
       - name: Show ccache stats
         if: always()
-        run: ccache -s
+        run: |
+          if [ -x /usr/bin/ccache ]; then
+            /usr/bin/ccache -s
+          else
+            echo "::warning::ccache is not installed in the build container"
+          fi
 
   misra:
     runs-on: ubuntu-24.04
