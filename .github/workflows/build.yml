@@ -66,3 +66,76 @@ jobs:
       - name: Show ccache stats
         if: always()
         run: ccache -s
+
+  misra:
+    runs-on: ubuntu-24.04
+    container: ghcr.io/cognipilot/ci-minimal:v0.1.1
+    env:
+      CMAKE_PREFIX_PATH: /opt/toolchains
+    steps:
+      - name: Set path
+        run: |
+          echo "/github/home/.local/bin" >> $GITHUB_PATH
+
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          path: cerebri
+
+      - name: Cache west modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            bootloader
+            modules
+            tools
+            zephyr
+          key: west-${{ hashFiles('cerebri/west.yml') }}
+          restore-keys: |
+            west-
+
+      - name: Initialize
+        working-directory: cerebri
+        run: |
+          west init -l .
+          west update
+          ./scripts/cyecca_install
+
+      # One representative board/app, not the full twister matrix — MISRA
+      # here is a structural/style check, not per-board coverage. See
+      # tools/misra/README.md for why.
+      - name: Build compile_commands.json (mr_canhubk3/s32k344, app/b3rb)
+        working-directory: cerebri
+        run: |
+          west build -p always -b mr_canhubk3/s32k344 app/b3rb \
+            -- -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Install cppcheck
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq cppcheck
+
+      # No --rule-texts flag: tools/misra/rule-texts.txt does not exist yet
+      # (MISRA rule text is copyrighted — see tools/misra/README.md). Do not
+      # add one until that file is actually committed, or this step errors.
+      - name: cppcheck --addon=misra
+        working-directory: cerebri
+        run: |
+          cppcheck \
+            --project=build/compile_commands.json \
+            --addon=misra \
+            --inline-suppr \
+            --suppressions-list=tools/misra/suppressions.txt \
+            -i zephyr -i modules -i build \
+            --error-exitcode=0 \
+            --xml --xml-version=2 \
+            2> misra-report.xml
+          echo "### MISRA — mr_canhubk3/s32k344, app/b3rb" >> "$GITHUB_STEP_SUMMARY"
+          grep -o 'id="[^"]*"' misra-report.xml | sort | uniq -c | sort -rn >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: misra-report
+          path: cerebri/misra-report.xml

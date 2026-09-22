@@ -1,0 +1,9 @@
+# cppcheck --suppressions-list=this
+# One entry per line: [error id]:[filename-glob]
+# Keep this scoped to code we actually own — never blanket-suppress a rule
+# across the whole tree. Add entries here only once the first real misra
+# run has told you what's actually noisy; don't pre-guess rule numbers.
+
+# casadi-generated dynamics/control code — not hand-written, not our MISRA scope
+*:*/src/casadi/gen/*
+*:*/casadi/b3rb.py
