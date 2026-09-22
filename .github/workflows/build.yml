@@ -84,6 +84,10 @@ jobs:
     container: ghcr.io/cognipilot/cognipilot-workspace:latest
     env:
       CMAKE_PREFIX_PATH: /opt/toolchains
+      # The workspace image does not yet support the Node 24 runtime mounted
+      # by the runner. Keep JavaScript actions on Node 20 until the image is
+      # rebuilt for Node 24.
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
     steps:
       - name: Checkout
         uses: actions/checkout@v6
