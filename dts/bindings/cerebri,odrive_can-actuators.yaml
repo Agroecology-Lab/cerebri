@@ -1,0 +1,91 @@
+# Copyright Agroecology Lab 2026
+# SPDX-License-Identifier: Apache-2.0
+
+description: ODRIVE_CAN actuators parent node
+
+  A generic binding for ODrive motor controllers driven over their native
+  CANSimple protocol (standard 11-bit IDs, arbitration id = node_id << 5 |
+  cmd_id). Note that this binding has no vendor prefix, as it does not
+  target a specific device or vendor.
+
+compatible: "cerebri,odrive_can-actuators"
+
+properties:
+  device:
+    required: true
+    type: phandle
+    description: Reference to a CAN bus instance.
+
+  fd:
+    type: boolean
+    description: enable CAN FD mode
+
+  pub-wheel-odometry:
+    type: boolean
+    description: >
+      Publishes wheel odometry (rotation, in radians of axis rotation) on
+      the average position of all axes. This mirrors the only other
+      actuate driver in this repo that populates topic_wheel_odometry
+      (vesc_can) -- confirm that's actually the convention the consumer
+      of this topic expects before relying on it.
+
+  status-rate:
+    required: true
+    type: int
+    description: |
+      Expected ODrive heartbeat / status rate in Hz, as configured on the
+      ODrive itself (<odrv>.axis.config.can.heartbeat_msg_rate_ms and
+      encoder_msg_rate_ms). Used only for diagnostics; if status-rate <0>
+      disables the expectation.
+
+child-binding:
+  description: ODRIVE_CAN actuator node
+  properties:
+
+    odrive-node-id:
+      required: true
+      type: int
+      description: >
+        ODrive CANSimple node id, i.e. <axis>.config.can.node_id as set on
+        the ODrive over USB before it goes on the bus. Range 0-63.
+
+    odrive-version:
+      type: int
+      default: 6
+      description: >
+        ODrive firmware CAN message layout version (4 or 6). Only affects
+        parsing of the motor_error_flag bit in the Heartbeat frame, which
+        was added in newer firmware.
+
+    input-index:
+      required: true
+      type: int
+      description: Index of actuator field specified by actuator input-type.
+
+    input-type:
+      required: true
+      type: string
+      description: >
+        What type of input signal to send to this axis. Only velocity and
+        torque are implemented -- see the note at the top of main.c for
+        why position control is deliberately left out for now.
+      enum:
+        - "velocity"
+        - "torque"
+
+    velocity-limit-mturns-s:
+      type: int
+      default: 0
+      description: >
+        Velocity limit to push to the axis via Set_Limits on every arm,
+        in milli-turns/s (i.e. value / 1000 = turns/s). 0 = don't send
+        Set_Limits for velocity; leave whatever is already saved on the
+        ODrive. Mirrors ODriveMotor::limits() in the Lizard firmware.
+
+    current-limit-ma:
+      type: int
+      default: 0
+      description: >
+        Current limit to push to the axis via Set_Limits on every arm, in
+        milliamps. 0 = don't send Set_Limits for current; leave whatever
+        is already saved on the ODrive.

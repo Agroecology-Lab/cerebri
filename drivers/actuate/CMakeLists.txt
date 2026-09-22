@@ -3,6 +3,7 @@
 add_subdirectory_ifdef(CONFIG_CEREBRI_ACTUATE_DSHOT dshot)
 add_subdirectory_ifdef(CONFIG_CEREBRI_ACTUATE_PWM pwm)
 add_subdirectory_ifdef(CONFIG_CEREBRI_ACTUATE_VESC_CAN vesc_can)
+add_subdirectory_ifdef(CONFIG_CEREBRI_ACTUATE_ODRIVE_CAN odrive_can)
 add_subdirectory_ifdef(CONFIG_CEREBRI_ACTUATE_STATUS_LED status_led)
 add_subdirectory_ifdef(CONFIG_CEREBRI_ACTUATE_LED_ARRAY led_array)
 add_subdirectory_ifdef(CONFIG_CEREBRI_ACTUATE_SOUND sound)
