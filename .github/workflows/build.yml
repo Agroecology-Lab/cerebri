@@ -11,7 +11,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    container: ghcr.io/cognipilot/ci-minimal:v0.1.1
+    container: ghcr.io/cognipilot/cognipilot-workspace:latest
     env:
       CMAKE_PREFIX_PATH: /opt/toolchains
     steps:
@@ -69,7 +69,7 @@ jobs:
 
   misra:
     runs-on: ubuntu-24.04
-    container: ghcr.io/cognipilot/ci-minimal:v0.1.1
+    container: ghcr.io/cognipilot/cognipilot-workspace:latest
     env:
       CMAKE_PREFIX_PATH: /opt/toolchains
     steps:
