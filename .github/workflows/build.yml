@@ -25,6 +25,8 @@ jobs:
 
       - name: Install build dependencies
         run: |
+          set -euxo pipefail
+
           apt-get update -qq
           apt-get install -y -qq \
             ca-certificates \
@@ -33,6 +35,8 @@ jobs:
             python3-pip
 
           update-ca-certificates
+          git config --global http.sslCAInfo /etc/ssl/certs/ca-certificates.crt
+          git config --global http.sslVerify true
 
           python3 -m pip install --break-system-packages poetry
           export PATH="/root/.local/bin:/usr/local/bin:$PATH"
@@ -73,7 +77,12 @@ jobs:
       - name: Initialize
         working-directory: cerebri
         run: |
+          set -euxo pipefail
           export PATH="/root/.local/bin:/usr/local/bin:$PATH"
+
+          git ls-remote https://github.com/CogniPilot/zephyr \
+            fd02d713535e8e683ec0e34fb942a08fe955878d
+
           west init -l .
           west update
           ./scripts/cyecca_install
@@ -140,11 +149,16 @@ jobs:
                 python3-pip
 
               update-ca-certificates
+              git config --global http.sslCAInfo /etc/ssl/certs/ca-certificates.crt
+              git config --global http.sslVerify true
 
               python3 -m pip install --break-system-packages poetry
 
               command -v poetry
               poetry --version
+
+              git ls-remote https://github.com/CogniPilot/zephyr \
+                fd02d713535e8e683ec0e34fb942a08fe955878d
 
               mkdir -p /workspace
               chmod 0777 /workspace
