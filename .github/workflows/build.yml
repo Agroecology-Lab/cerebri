@@ -53,7 +53,9 @@ jobs:
       - name: Initialize
         working-directory: cerebri
         run: |
-          export PATH="/github/home/.local/bin:$PATH"
+          set -euo pipefail
+          export PATH="/root/.local/bin:/github/home/.local/bin:$PATH"
+          python3 -m pip install --user --break-system-packages poetry
           west init -l .
           west update
           ./scripts/cyecca_install
@@ -61,13 +63,13 @@ jobs:
       - name: Format Check
         working-directory: cerebri
         run: |
-          export PATH="/github/home/.local/bin:$PATH"
+          export PATH="/root/.local/bin:/github/home/.local/bin:$PATH"
           west format -c
 
       - name: Twister Tests
         working-directory: cerebri
         run: |
-          export PATH="/github/home/.local/bin:$PATH"
+          export PATH="/root/.local/bin:/github/home/.local/bin:$PATH"
           west test
 
       - name: Show ccache stats
@@ -110,11 +112,14 @@ jobs:
       - name: Initialize and build compile_commands.json
         run: |
           docker run --rm \
+            --user 0:0 \
             -v "$GITHUB_WORKSPACE:/workspace" \
             -w /workspace/cerebri \
+            -e HOME=/root \
             -e CMAKE_PREFIX_PATH=/opt/toolchains \
-            "$MISRA_IMAGE" bash -lc '
-              export PATH="/github/home/.local/bin:$PATH"
+            "$MISRA_IMAGE" bash -euo pipefail -c '
+              export PATH="/root/.local/bin:/github/home/.local/bin:$PATH"
+              python3 -m pip install --user --break-system-packages poetry
               west init -l .
               west update
               ./scripts/cyecca_install
@@ -125,9 +130,11 @@ jobs:
       - name: Run cppcheck MISRA analysis
         run: |
           docker run --rm \
+            --user 0:0 \
             -v "$GITHUB_WORKSPACE:/workspace" \
             -w /workspace/cerebri \
-            "$MISRA_IMAGE" bash -lc '
+            -e HOME=/root \
+            "$MISRA_IMAGE" bash -euo pipefail -c '
               apt-get update -qq
               apt-get install -y -qq cppcheck
               cppcheck \
@@ -140,7 +147,7 @@ jobs:
                 --xml --xml-version=2 \
                 2> misra-report.xml
               echo "### MISRA — mr_canhubk3/s32k344, app/b3rb" >> "$GITHUB_STEP_SUMMARY"
-              grep -o '"'"'id="'"'[^"'"']*"'"'" misra-report.xml | sort | uniq -c | sort -rn >> "$GITHUB_STEP_SUMMARY" || true
+              grep -o 'id="[^"]*"' misra-report.xml | sort | uniq -c | sort -rn >> "$GITHUB_STEP_SUMMARY" || true
             '
 
       - name: Upload report
