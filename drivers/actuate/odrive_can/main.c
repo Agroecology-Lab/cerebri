@@ -90,7 +90,7 @@ uint32_t g_send_count = 0;
 extern struct perf_duration control_latency;
 
 static void actuate_odrive_can_rx_callback(const struct device *dev, struct can_frame *frame,
-					    void *user_data);
+					   void *user_data);
 
 typedef enum odrive_can_type_t {
 	ODRIVE_CAN_TYPE_VELOCITY = 0,
@@ -108,7 +108,7 @@ struct actuator_odrive_can {
 	struct can_filter rx_filter_heartbeat;
 	struct can_filter rx_filter_encoder;
 	struct context *ctx;
-	int8_t axis_state;  /* last state reported by the ODrive, -1 unknown */
+	int8_t axis_state; /* last state reported by the ODrive, -1 unknown */
 	uint32_t axis_error;
 	bool motor_error_flag;
 	int8_t requested_state; /* last axis state we commanded, -1 = none yet */
@@ -222,7 +222,7 @@ static int actuate_odrive_can_init(struct context *ctx)
 		act->rx_filter_heartbeat.id = (act->node_id << 5) | ODRV_CMD_HEARTBEAT;
 		act->rx_filter_heartbeat.mask = CAN_STD_ID_MASK;
 		err = can_add_rx_filter(ctx->device, actuate_odrive_can_rx_callback, act,
-					 &act->rx_filter_heartbeat);
+					&act->rx_filter_heartbeat);
 		if (err < 0) {
 			LOG_ERR("%s - heartbeat filter setup failed (%d)\n", ctx->label, err);
 			return err;
@@ -232,7 +232,7 @@ static int actuate_odrive_can_init(struct context *ctx)
 		act->rx_filter_encoder.id = (act->node_id << 5) | ODRV_CMD_GET_ENCODER_ESTIMATE;
 		act->rx_filter_encoder.mask = CAN_STD_ID_MASK;
 		err = can_add_rx_filter(ctx->device, actuate_odrive_can_rx_callback, act,
-					 &act->rx_filter_encoder);
+					&act->rx_filter_encoder);
 		if (err < 0) {
 			LOG_ERR("%s - encoder filter setup failed (%d)\n", ctx->label, err);
 			return err;
@@ -259,7 +259,7 @@ static int actuate_odrive_can_fini(struct context *ctx)
 }
 
 static void actuate_odrive_can_rx_callback(const struct device *dev, struct can_frame *frame,
-					    void *user_data)
+					   void *user_data)
 {
 	struct actuator_odrive_can *act = (struct actuator_odrive_can *)user_data;
 	struct context *ctx = act->ctx;
@@ -303,7 +303,7 @@ static void actuate_odrive_can_rx_callback(const struct device *dev, struct can_
 }
 
 static int actuate_odrive_can_send(struct context *ctx, struct actuator_odrive_can *act,
-				    uint32_t cmd_id, const uint8_t *data, uint8_t len)
+				   uint32_t cmd_id, const uint8_t *data, uint8_t len)
 {
 	struct can_frame frame = {
 		.id = (act->node_id << 5) | cmd_id,
@@ -341,7 +341,7 @@ static int actuate_odrive_can_set_limits(struct context *ctx, struct actuator_od
 }
 
 static int actuate_odrive_can_set_axis_state(struct context *ctx, struct actuator_odrive_can *act,
-					      uint8_t state)
+					     uint8_t state)
 {
 	if (act->requested_state == state) {
 		return 0;
@@ -356,8 +356,8 @@ static int actuate_odrive_can_set_axis_state(struct context *ctx, struct actuato
 }
 
 static int actuate_odrive_can_set_controller_mode(struct context *ctx,
-						   struct actuator_odrive_can *act,
-						   uint8_t control_mode, uint8_t input_mode)
+						  struct actuator_odrive_can *act,
+						  uint8_t control_mode, uint8_t input_mode)
 {
 	int8_t combined = (int8_t)((control_mode << 4) | input_mode);
 	if (act->requested_mode == combined) {
@@ -417,12 +417,12 @@ static void actuate_odrive_can_update(struct context *ctx)
 		}
 
 		uint8_t control_mode = (act->type == ODRIVE_CAN_TYPE_TORQUE)
-						? ODRV_CONTROL_MODE_TORQUE_CONTROL
-						: ODRV_CONTROL_MODE_VELOCITY_CONTROL;
+					       ? ODRV_CONTROL_MODE_TORQUE_CONTROL
+					       : ODRV_CONTROL_MODE_VELOCITY_CONTROL;
 
 		actuate_odrive_can_set_axis_state(ctx, act, ODRV_AXIS_STATE_CLOSED_LOOP_CONTROL);
 		actuate_odrive_can_set_controller_mode(ctx, act, control_mode,
-							ODRV_INPUT_MODE_PASSTHROUGH);
+						       ODRV_INPUT_MODE_PASSTHROUGH);
 
 		float input = (float)ctx->actuators.velocity[act->index];
 		uint8_t data[8] = {0};
@@ -505,7 +505,7 @@ static int start(struct context *ctx)
 }
 
 static int actuate_odrive_can_cmd_handler(const struct shell *sh, size_t argc, char **argv,
-					   void *data)
+					  void *data)
 {
 	ARG_UNUSED(argc);
 	struct context *ctx = data;
@@ -550,64 +550,63 @@ static int actuate_odrive_can_device_init(const struct device *dev)
 	return 0;
 }
 
-#define ODRIVE_CAN_ACTUATOR_SHELL(inst)                                                          \
-	SHELL_SUBCMD_DICT_SET_CREATE(                                                            \
-		sub_actuate_odrive_can_##inst, actuate_odrive_can_cmd_handler,                   \
-		(start, &data_##inst, "start"), (stop, &data_##inst, "stop"),                    \
-		(status, &data_##inst, "status"),                                                 \
-		(clear_errors, &data_##inst, "clear_errors"));                                   \
-	SHELL_CMD_REGISTER(actuate_odrive_can_##inst, &sub_actuate_odrive_can_##inst,            \
+#define ODRIVE_CAN_ACTUATOR_SHELL(inst)                                                            \
+	SHELL_SUBCMD_DICT_SET_CREATE(                                                              \
+		sub_actuate_odrive_can_##inst, actuate_odrive_can_cmd_handler,                     \
+		(start, &data_##inst, "start"), (stop, &data_##inst, "stop"),                      \
+		(status, &data_##inst, "status"), (clear_errors, &data_##inst, "clear_errors"));   \
+	SHELL_CMD_REGISTER(actuate_odrive_can_##inst, &sub_actuate_odrive_can_##inst,              \
 			   "actuate_odrive_can commands", NULL);
 
-#define ODRIVE_CAN_ACTUATOR_DEFINE(node_id)                                                      \
+#define ODRIVE_CAN_ACTUATOR_DEFINE(node_id)                                                        \
 	{                                                                                          \
-		.label = DT_NODE_FULL_NAME(node_id),                                              \
-		.index = DT_PROP(node_id, input_index),                                          \
-		.node_id = DT_PROP(node_id, odrive_node_id),                                     \
-		.version = DT_PROP_OR(node_id, odrive_version, 6),                                \
-		.type = DT_ENUM_IDX(node_id, input_type),                                        \
-		.velocity_limit_mturns_s = DT_PROP_OR(node_id, velocity_limit_mturns_s, 0),       \
-		.current_limit_ma = DT_PROP_OR(node_id, current_limit_ma, 0),                    \
-		.rx_filter_heartbeat = {},                                                        \
-		.rx_filter_encoder = {},                                                          \
-		.ctx = NULL,                                                                      \
-		.axis_state = -1,                                                                 \
-		.axis_error = 0,                                                                  \
-		.motor_error_flag = false,                                                        \
-		.requested_state = -1,                                                            \
-		.requested_mode = -1,                                                             \
-		.armed_prev = false,                                                              \
-		.limits_sent = false,                                                             \
-		.boot_complete = false,                                                           \
-		.position = 0,                                                                    \
-		.velocity = 0,                                                                    \
+		.label = DT_NODE_FULL_NAME(node_id),                                               \
+		.index = DT_PROP(node_id, input_index),                                            \
+		.node_id = DT_PROP(node_id, odrive_node_id),                                       \
+		.version = DT_PROP_OR(node_id, odrive_version, 6),                                 \
+		.type = DT_ENUM_IDX(node_id, input_type),                                          \
+		.velocity_limit_mturns_s = DT_PROP_OR(node_id, velocity_limit_mturns_s, 0),        \
+		.current_limit_ma = DT_PROP_OR(node_id, current_limit_ma, 0),                      \
+		.rx_filter_heartbeat = {},                                                         \
+		.rx_filter_encoder = {},                                                           \
+		.ctx = NULL,                                                                       \
+		.axis_state = -1,                                                                  \
+		.axis_error = 0,                                                                   \
+		.motor_error_flag = false,                                                         \
+		.requested_state = -1,                                                             \
+		.requested_mode = -1,                                                              \
+		.armed_prev = false,                                                               \
+		.limits_sent = false,                                                              \
+		.boot_complete = false,                                                            \
+		.position = 0,                                                                     \
+		.velocity = 0,                                                                     \
 	},
 
-#define ODRIVE_CAN_ACTUATORS_DEFINE(inst)                                                        \
-	static struct actuator_odrive_can g_actuator_odrive_cans_##inst[] = {                    \
-		DT_FOREACH_CHILD(DT_DRV_INST(inst), ODRIVE_CAN_ACTUATOR_DEFINE)};                \
-	static K_THREAD_STACK_DEFINE(g_my_stack_area_##inst, MY_STACK_SIZE);                     \
-	static struct context data_##inst = {                                                    \
-		.actuators = synapse_pb_Actuators_init_default,                                  \
-		.status = synapse_pb_Status_init_default,                                        \
-		.node = {},                                                                       \
-		.sub_status = {},                                                                 \
-		.sub_actuators = {},                                                              \
-		.running = Z_SEM_INITIALIZER(data_##inst.running, 1, 1),                         \
-		.stack_size = MY_STACK_SIZE,                                                      \
-		.stack_area = g_my_stack_area_##inst,                                             \
-		.thread_data = {},                                                                \
-		.actuator_odrive_cans = g_actuator_odrive_cans_##inst,                            \
-		.num_actuators = DT_CHILD_NUM(DT_DRV_INST(inst)),                                 \
-		.device = DEVICE_DT_GET(DT_INST_PROP(inst, device)),                              \
-		.ready = false,                                                                   \
-		.fd = DT_INST_PROP(inst, fd),                                                     \
-		.status_rate = DT_INST_PROP(inst, status_rate),                                  \
-		.enable_pub_wheel_odom = DT_INST_PROP(inst, pub_wheel_odometry),                  \
-		.label = DT_NODE_FULL_NAME(DT_DRV_INST(inst)),                                   \
-	};                                                                                        \
-	ODRIVE_CAN_ACTUATOR_SHELL(inst);                                                          \
-	DEVICE_DT_INST_DEFINE(inst, actuate_odrive_can_device_init, NULL, &data_##inst, NULL,     \
+#define ODRIVE_CAN_ACTUATORS_DEFINE(inst)                                                          \
+	static struct actuator_odrive_can g_actuator_odrive_cans_##inst[] = {                      \
+		DT_FOREACH_CHILD(DT_DRV_INST(inst), ODRIVE_CAN_ACTUATOR_DEFINE)};                  \
+	static K_THREAD_STACK_DEFINE(g_my_stack_area_##inst, MY_STACK_SIZE);                       \
+	static struct context data_##inst = {                                                      \
+		.actuators = synapse_pb_Actuators_init_default,                                    \
+		.status = synapse_pb_Status_init_default,                                          \
+		.node = {},                                                                        \
+		.sub_status = {},                                                                  \
+		.sub_actuators = {},                                                               \
+		.running = Z_SEM_INITIALIZER(data_##inst.running, 1, 1),                           \
+		.stack_size = MY_STACK_SIZE,                                                       \
+		.stack_area = g_my_stack_area_##inst,                                              \
+		.thread_data = {},                                                                 \
+		.actuator_odrive_cans = g_actuator_odrive_cans_##inst,                             \
+		.num_actuators = DT_CHILD_NUM(DT_DRV_INST(inst)),                                  \
+		.device = DEVICE_DT_GET(DT_INST_PROP(inst, device)),                               \
+		.ready = false,                                                                    \
+		.fd = DT_INST_PROP(inst, fd),                                                      \
+		.status_rate = DT_INST_PROP(inst, status_rate),                                    \
+		.enable_pub_wheel_odom = DT_INST_PROP(inst, pub_wheel_odometry),                   \
+		.label = DT_NODE_FULL_NAME(DT_DRV_INST(inst)),                                     \
+	};                                                                                         \
+	ODRIVE_CAN_ACTUATOR_SHELL(inst);                                                           \
+	DEVICE_DT_INST_DEFINE(inst, actuate_odrive_can_device_init, NULL, &data_##inst, NULL,      \
 			      POST_KERNEL, ODRIVE_CAN_ACTUATORS_INIT_PRIORITY, NULL);
 
 DT_INST_FOREACH_STATUS_OKAY(ODRIVE_CAN_ACTUATORS_DEFINE)

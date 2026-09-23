@@ -77,6 +77,9 @@ jobs:
           west init -l .
           west update
           ./scripts/cyecca_install
+          python3 -m pip install --user --break-system-packages \
+            -r ../zephyr/scripts/requirements.txt
+          west sdk install -d /opt/toolchains
 
       - name: Format Check
         working-directory: cerebri
@@ -128,8 +131,31 @@ jobs:
           restore-keys: |
             west-
 
-      - name: Initialize and build compile_commands.json
-        shell: bash
+      - name: Install build dependencies
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq python3 python3-pip
+
+      - name: Initialize
+        working-directory: cerebri
+        run: |
+          export PATH="/github/home/.local/bin:$PATH"
+          west init -l .
+          west update
+          ./scripts/cyecca_install
+          west sdk install -d /opt/toolchains
+
+      # One representative board/app, not the full twister matrix — MISRA
+      # here is a structural/style check, not per-board coverage. See
+      # tools/misra/README.md for why.
+      - name: Build compile_commands.json (mr_canhubk3/s32k344, app/b3rb)
+        working-directory: cerebri
+        run: |
+          export PATH="/github/home/.local/bin:$PATH"
+          west build -p always -b mr_canhubk3/s32k344 app/b3rb \
+            -- -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Install cppcheck
         run: |
           set -euo pipefail
           docker run --rm \
