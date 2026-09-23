@@ -1,0 +1,31 @@
+diff --git a/.github/workflows/build.yml b/.github/workflows/build.yml
+index 36ffdcd..659309b 100644
+--- a/.github/workflows/build.yml
++++ b/.github/workflows/build.yml
+@@ -30,12 +30,15 @@ jobs:
+             ca-certificates \
+             ccache \
+             git \
++            libc6-dev \
+             python3 \
+             python3-pip
+           sudo update-ca-certificates
+           command -v ccache
+           test -x /usr/bin/ccache
+           test -f /etc/ssl/certs/ca-certificates.crt
++          sudo mkdir -p /ccache
++          sudo chown "$(id -u):$(id -g)" /ccache
+ 
+       - name: Cache west modules
+         uses: actions/cache@v4
+@@ -133,8 +136,8 @@ jobs:
+ 
+       - name: Install build dependencies
+         run: |
+-          apt-get update -qq
+-          apt-get install -y -qq python3 python3-pip
++          sudo apt-get update -qq
++          sudo apt-get install -y -qq python3 python3-pip
+ 
+       - name: Initialize
+         working-directory: cerebri
