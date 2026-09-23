@@ -1,0 +1,259 @@
+diff --git a/.github/workflows/build.yml b/.github/workflows/build.yml
+index 659309b..a20c965 100644
+--- a/.github/workflows/build.yml
++++ b/.github/workflows/build.yml
+@@ -29,10 +29,20 @@ jobs:
+           sudo apt-get install -y --no-install-recommends \
+             ca-certificates \
+             ccache \
++            cmake \
++            device-tree-compiler \
++            file \
++            g++-multilib \
++            gcc-multilib \
+             git \
+-            libc6-dev \
++            gperf \
++            make \
++            ninja-build \
++            protobuf-compiler \
+             python3 \
+-            python3-pip
++            python3-pip \
++            wget \
++            xz-utils
+           sudo update-ca-certificates
+           command -v ccache
+           test -x /usr/bin/ccache
+@@ -82,7 +92,9 @@ jobs:
+           ./scripts/cyecca_install
+           python3 -m pip install --user --break-system-packages \
+             -r ../zephyr/scripts/requirements.txt
+-          west sdk install -d /opt/toolchains
++          # Host tools + ARM toolchain only. Every hardware target here is ARM;
++          # native_sim uses the host gcc. Omitting -t downloads every arch.
++          west sdk install -d /opt/toolchains -t arm-zephyr-eabi
+ 
+       - name: Format Check
+         working-directory: cerebri
+@@ -100,6 +112,31 @@ jobs:
+           export PATH="$HOME/.local/bin:$PATH"
+           west test
+ 
++      - name: Show twister build errors
++        if: failure()
++        working-directory: cerebri
++        shell: bash
++        run: |
++          # west test only prints a summary; pull the first errors out of each
++          # failed scenario's build.log so they are visible in the job log.
++          find twister-out -name build.log 2>/dev/null | sort | while read -r f; do
++            if grep -qE 'CMake Error|error:|Error [0-9]+|Error:|FAILED:' "$f"; then
++              echo "::group::$f"
++              grep -m8 -E 'CMake Error|error:|Error [0-9]+|Error:|FAILED:' "$f" || true
++              echo "::endgroup::"
++            fi
++          done
++
++      - name: Upload twister logs
++        if: failure()
++        uses: actions/upload-artifact@v4
++        with:
++          name: twister-logs
++          path: |
++            cerebri/twister-out/**/*.log
++            cerebri/twister-out/twister.json
++          if-no-files-found: ignore
++
+       - name: Show ccache stats
+         if: always()
+         shell: bash
+@@ -113,7 +150,6 @@ jobs:
+   misra:
+     runs-on: ubuntu-24.04
+     env:
+-      MISRA_IMAGE: ghcr.io/cognipilot/cognipilot-workspace:latest
+       CMAKE_PREFIX_PATH: /opt/toolchains
+ 
+     steps:
+@@ -122,6 +158,30 @@ jobs:
+         with:
+           path: cerebri
+ 
++      - name: Install build dependencies
++        shell: bash
++        run: |
++          set -euo pipefail
++          sudo apt-get update -qq
++          sudo apt-get install -y --no-install-recommends \
++            ca-certificates \
++            cmake \
++            cppcheck \
++            device-tree-compiler \
++            file \
++            g++-multilib \
++            gcc-multilib \
++            git \
++            gperf \
++            make \
++            ninja-build \
++            protobuf-compiler \
++            python3 \
++            python3-pip \
++            wget \
++            xz-utils
++          sudo update-ca-certificates
++
+       - name: Cache west modules
+         uses: actions/cache@v4
+         with:
+@@ -134,65 +194,68 @@ jobs:
+           restore-keys: |
+             west-
+ 
+-      - name: Install build dependencies
+-        run: |
+-          sudo apt-get update -qq
+-          sudo apt-get install -y -qq python3 python3-pip
+-
+       - name: Initialize
+         working-directory: cerebri
++        shell: bash
+         run: |
+-          export PATH="/github/home/.local/bin:$PATH"
++          set -euo pipefail
++          export PATH="$HOME/.local/bin:$PATH"
++          export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
++          export GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt
++
++          python3 -m pip install --user --break-system-packages poetry west
++          command -v poetry
++          command -v west
++          west --version
++
+           west init -l .
+           west update
+           ./scripts/cyecca_install
+-          west sdk install -d /opt/toolchains
++          python3 -m pip install --user --break-system-packages \
++            -r ../zephyr/scripts/requirements.txt
++          # Host tools + ARM toolchain only (see the build job).
++          west sdk install -d /opt/toolchains -t arm-zephyr-eabi
+ 
+       # One representative board/app, not the full twister matrix — MISRA
+       # here is a structural/style check, not per-board coverage. See
+       # tools/misra/README.md for why.
+       - name: Build compile_commands.json (mr_canhubk3/s32k344, app/b3rb)
+         working-directory: cerebri
++        shell: bash
+         run: |
+-          export PATH="/github/home/.local/bin:$PATH"
++          set -euo pipefail
++          export PATH="$HOME/.local/bin:$PATH"
+           west build -p always -b mr_canhubk3/s32k344 app/b3rb \
+             -- -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+ 
+-      - name: Install cppcheck
+-        run: |
+-          set -euo pipefail
+-          docker run --rm \
+-            --user 0:0 \
+-            --entrypoint /bin/bash \
+-            -v "$GITHUB_WORKSPACE:/workspace" \
+-            -w /workspace/cerebri \
+-            -e HOME=/root \
+-            -e CMAKE_PREFIX_PATH=/opt/toolchains \
+-            -e SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+-            -e GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt \
+-            "$MISRA_IMAGE" \
+-            -lc 'set -euo pipefail
+-              export PATH=/root/.local/bin:$PATH
+-              python3 -m pip install --user --break-system-packages poetry west
+-              poetry --version
+-              west --version
+-              west init -l .
+-              west update
+-              ./scripts/cyecca_install
+-              west build -b native_sim -d build -t dans -- -DCMAKE_EXPORT_COMPILE_COMMANDS=ON'
+-
++      # --file-filter limits analysis to our own code (Zephyr and the modules
++      # are in the compile database but are not ours to fix).
++      # --cppcheck-build-dir stops the misra addon writing .dump files into src.
++      # Report-only for now (--error-exitcode=0); see tools/misra/README.md.
+       - name: Run cppcheck MISRA analysis
++        working-directory: cerebri
+         shell: bash
+         run: |
+           set -euo pipefail
+-          docker run --rm \
+-            --user 0:0 \
+-            --entrypoint /bin/bash \
+-            -v "$GITHUB_WORKSPACE:/workspace" \
+-            -w /workspace/cerebri \
+-            -e HOME=/root \
+-            "$MISRA_IMAGE" \
+-            -lc "set -euo pipefail; nix shell nixpkgs#cppcheck --command cppcheck --project=build/compile_commands.json --addon=misra --inline-suppr --suppressions-list=tools/misra/suppressions.txt --xml --xml-version=2 2>misra-report.xml"
++          mkdir -p build/cppcheck
++          cppcheck \
++            --project=build/compile_commands.json \
++            --cppcheck-build-dir=build/cppcheck \
++            --file-filter="$PWD/app/*" \
++            --file-filter="$PWD/lib/*" \
++            --file-filter="$PWD/drivers/*" \
++            --addon=misra \
++            --inline-suppr \
++            --suppressions-list=tools/misra/suppressions.txt \
++            --error-exitcode=0 \
++            --xml --xml-version=2 \
++            2> misra-report.xml
++          {
++            echo "### MISRA — mr_canhubk3/s32k344, app/b3rb"
++            echo '```'
++            grep -o 'id="[^"]*"' misra-report.xml | sort | uniq -c | sort -rn || true
++            echo '```'
++          } >> "$GITHUB_STEP_SUMMARY"
+ 
+       - name: Upload report
+         if: always()
+@@ -200,3 +263,4 @@ jobs:
+         with:
+           name: misra-report
+           path: cerebri/misra-report.xml
++          if-no-files-found: ignore
+diff --git a/ci-ccache-apt-fixes.diff b/ci-ccache-apt-fixes.diff
+deleted file mode 100644
+index ad82cac..0000000
+--- a/ci-ccache-apt-fixes.diff
++++ /dev/null
+@@ -1,31 +0,0 @@
+-diff --git a/.github/workflows/build.yml b/.github/workflows/build.yml
+-index 36ffdcd..659309b 100644
+---- a/.github/workflows/build.yml
+-+++ b/.github/workflows/build.yml
+-@@ -30,12 +30,15 @@ jobs:
+-             ca-certificates \
+-             ccache \
+-             git \
+-+            libc6-dev \
+-             python3 \
+-             python3-pip
+-           sudo update-ca-certificates
+-           command -v ccache
+-           test -x /usr/bin/ccache
+-           test -f /etc/ssl/certs/ca-certificates.crt
+-+          sudo mkdir -p /ccache
+-+          sudo chown "$(id -u):$(id -g)" /ccache
+- 
+-       - name: Cache west modules
+-         uses: actions/cache@v4
+-@@ -133,8 +136,8 @@ jobs:
+- 
+-       - name: Install build dependencies
+-         run: |
+--          apt-get update -qq
+--          apt-get install -y -qq python3 python3-pip
+-+          sudo apt-get update -qq
+-+          sudo apt-get install -y -qq python3 python3-pip
+- 
+-       - name: Initialize
+-         working-directory: cerebri
