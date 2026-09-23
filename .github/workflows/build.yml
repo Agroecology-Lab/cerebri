@@ -11,9 +11,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    container:
-      image: ghcr.io/cognipilot/cognipilot-workspace:latest
-      options: --user 0:0 --entrypoint ""
+    container: ghcr.io/cognipilot/cognipilot-workspace:latest
     env:
       CMAKE_PREFIX_PATH: /opt/toolchains
       CCACHE_DIR: /ccache
@@ -25,31 +23,13 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          set -euxo pipefail
-
+          set -euo pipefail
           apt-get update -qq
-          apt-get install -y -qq \
-            ca-certificates \
-            ccache \
-            git \
-            python3-pip
-
+          apt-get install -y -qq ca-certificates ccache git
           update-ca-certificates
-          git config --global http.sslCAInfo /etc/ssl/certs/ca-certificates.crt
-          git config --global http.sslVerify true
-
-          python3 -m pip install --break-system-packages poetry
-          export PATH="/root/.local/bin:/usr/local/bin:$PATH"
-
-          command -v poetry
-          poetry --version
-
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           echo "/usr/bin" >> "$GITHUB_PATH"
-
-          mkdir -p /workspace
-          chmod 0777 /workspace
           test -x /usr/bin/ccache
+          test -f /etc/ssl/certs/ca-certificates.crt
 
       - name: Cache west modules
         uses: actions/cache@v4
@@ -59,9 +39,8 @@ jobs:
             modules
             tools
             zephyr
-          key: west-v2-${{ hashFiles('cerebri/west.yml') }}
+          key: west-${{ hashFiles('cerebri/west.yml') }}
           restore-keys: |
-            west-v2-
             west-
 
       - name: Cache ccache
@@ -77,11 +56,14 @@ jobs:
       - name: Initialize
         working-directory: cerebri
         run: |
-          set -euxo pipefail
-          export PATH="/root/.local/bin:/usr/local/bin:$PATH"
+          set -euo pipefail
+          export PATH="/root/.local/bin:/github/home/.local/bin:$PATH"
+          export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+          export GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt
 
-          git ls-remote https://github.com/CogniPilot/zephyr \
-            fd02d713535e8e683ec0e34fb942a08fe955878d
+          python3 -m pip install --user --break-system-packages poetry
+          command -v poetry
+          poetry --version
 
           west init -l .
           west update
@@ -90,13 +72,13 @@ jobs:
       - name: Format Check
         working-directory: cerebri
         run: |
-          export PATH="/root/.local/bin:/usr/local/bin:$PATH"
+          export PATH="/root/.local/bin:/github/home/.local/bin:$PATH"
           west format -c
 
       - name: Twister Tests
         working-directory: cerebri
         run: |
-          export PATH="/root/.local/bin:/usr/local/bin:$PATH"
+          export PATH="/root/.local/bin:/github/home/.local/bin:$PATH"
           west test
 
       - name: Show ccache stats
@@ -127,9 +109,8 @@ jobs:
             modules
             tools
             zephyr
-          key: west-v2-${{ hashFiles('cerebri/west.yml') }}
+          key: west-${{ hashFiles('cerebri/west.yml') }}
           restore-keys: |
-            west-v2-
             west-
 
       - name: Initialize and build compile_commands.json
@@ -138,35 +119,27 @@ jobs:
             --user 0:0 \
             -v "$GITHUB_WORKSPACE:/workspace" \
             -w /workspace/cerebri \
+            -e HOME=/root \
             -e CMAKE_PREFIX_PATH=/opt/toolchains \
-            "$MISRA_IMAGE" bash -euxo pipefail -lc '
-              export PATH="/root/.local/bin:/usr/local/bin:$PATH"
-
+            -e SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+            -e GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt \
+            "$MISRA_IMAGE" bash -euo pipefail -c '
+              set -euo pipefail
               apt-get update -qq
-              apt-get install -y -qq \
-                ca-certificates \
-                git \
-                python3-pip
-
+              apt-get install -y -qq ca-certificates git
               update-ca-certificates
-              git config --global http.sslCAInfo /etc/ssl/certs/ca-certificates.crt
-              git config --global http.sslVerify true
 
-              python3 -m pip install --break-system-packages poetry
+              export PATH="/root/.local/bin:/github/home/.local/bin:$PATH"
+              export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+              export GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt
 
+              python3 -m pip install --user --break-system-packages poetry
               command -v poetry
               poetry --version
-
-              git ls-remote https://github.com/CogniPilot/zephyr \
-                fd02d713535e8e683ec0e34fb942a08fe955878d
-
-              mkdir -p /workspace
-              chmod 0777 /workspace
 
               west init -l .
               west update
               ./scripts/cyecca_install
-
               west build -p always -b mr_canhubk3/s32k344 app/b3rb \
                 -- -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
             '
@@ -174,9 +147,11 @@ jobs:
       - name: Run cppcheck MISRA analysis
         run: |
           docker run --rm \
+            --user 0:0 \
             -v "$GITHUB_WORKSPACE:/workspace" \
             -w /workspace/cerebri \
-            "$MISRA_IMAGE" bash -lc '
+            -e HOME=/root \
+            "$MISRA_IMAGE" bash -euo pipefail -c '
               apt-get update -qq
               apt-get install -y -qq cppcheck
               cppcheck \
@@ -189,7 +164,7 @@ jobs:
                 --xml --xml-version=2 \
                 2> misra-report.xml
               echo "### MISRA — mr_canhubk3/s32k344, app/b3rb" >> "$GITHUB_STEP_SUMMARY"
-              grep -o '"'"'id="'"'[^"'"']*"'"'" misra-report.xml | sort | uniq -c | sort -rn >> "$GITHUB_STEP_SUMMARY" || true
+              grep -o 'id="[^"]*"' misra-report.xml | sort | uniq -c | sort -rn >> "$GITHUB_STEP_SUMMARY" || true
             '
 
       - name: Upload report
