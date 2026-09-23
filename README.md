@@ -32,8 +32,8 @@ and can override it independently).
 
 Safety and Testing
 
-* openpilot observes [ISO26262](https://en.wikipedia.org/wiki/ISO_26262) guidelines, see [SAFETY.md](docs/SAFETY.md) for more details.
-* openpilot has software-in-the-loop [tests](.github/workflows/tests.yaml) that run on every commit.
+* openpilot observes [ISO26262](https://en.wikipedia.org/wiki/ISO_26262) guidelines, see [SAFETY.md](https://github.com/commaai/openpilot/blob/master/docs/SAFETY.md) for more details.
+* openpilot has software-in-the-loop [tests](https://github.com/commaai/openpilot/blob/master/.github/workflows/tests.yaml) that run on every commit.
 * The code enforcing the safety model lives in panda and is written in C, see [code rigor](https://github.com/commaai/panda#code-rigor) for more details.
 * panda has software-in-the-loop [safety tests](https://github.com/commaai/panda/tree/master/tests/safety).
 * Internally, we have a hardware-in-the-loop Jenkins test suite that builds and unit tests the various processes.
