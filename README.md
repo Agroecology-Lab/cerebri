@@ -28,4 +28,13 @@ and can override it independently).
 | C12 | Synapse ROS bridge (protobuf over Ethernet) | Partial — MCU side (`drivers/synapse`) exists, host-side bridge doesn't |
 | C13 | Safety test suite for the override path | Not started — needed before C8 ships |
 
-No MISRA-C or test-gating convention exists for this repo yet, unlike openpilot's [opendbc/safety](https://github.com/commaai/opendbc/tree/4134c0d1f5e8f695e35ea5fedbe88f6d0c3afb76/opendbc/safety) tests. 
+## Notes 
+
+Safety and Testing
+
+* openpilot observes [ISO26262](https://en.wikipedia.org/wiki/ISO_26262) guidelines, see [SAFETY.md](docs/SAFETY.md) for more details.
+* openpilot has software-in-the-loop [tests](.github/workflows/tests.yaml) that run on every commit.
+* The code enforcing the safety model lives in panda and is written in C, see [code rigor](https://github.com/commaai/panda#code-rigor) for more details.
+* panda has software-in-the-loop [safety tests](https://github.com/commaai/panda/tree/master/tests/safety).
+* Internally, we have a hardware-in-the-loop Jenkins test suite that builds and unit tests the various processes.
+* panda has additional hardware-in-the-loop [tests](https://github.com/commaai/panda/blob/master/Jenkinsfile).
