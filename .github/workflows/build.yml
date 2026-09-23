@@ -11,23 +11,29 @@ on:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    container: ghcr.io/cognipilot/cognipilot-workspace:latest
     env:
       CMAKE_PREFIX_PATH: /opt/toolchains
       CCACHE_DIR: /ccache
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           path: cerebri
 
       - name: Install build dependencies
+        shell: bash
         run: |
           set -euo pipefail
-          apt-get update -qq
-          apt-get install -y -qq ca-certificates ccache git
-          update-ca-certificates
-          echo "/usr/bin" >> "$GITHUB_PATH"
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            ca-certificates \
+            ccache \
+            git \
+            python3 \
+            python3-pip
+          sudo update-ca-certificates
+          command -v ccache
           test -x /usr/bin/ccache
           test -f /etc/ssl/certs/ca-certificates.crt
 
@@ -55,9 +61,10 @@ jobs:
 
       - name: Initialize
         working-directory: cerebri
+        shell: bash
         run: |
           set -euo pipefail
-          export PATH="/root/.local/bin:/github/home/.local/bin:$PATH"
+          export PATH="$HOME/.local/bin:$PATH"
           export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
           export GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt
 
@@ -71,23 +78,28 @@ jobs:
 
       - name: Format Check
         working-directory: cerebri
+        shell: bash
         run: |
-          export PATH="/root/.local/bin:/github/home/.local/bin:$PATH"
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
           west format -c
 
       - name: Twister Tests
         working-directory: cerebri
+        shell: bash
         run: |
-          export PATH="/root/.local/bin:/github/home/.local/bin:$PATH"
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
           west test
 
       - name: Show ccache stats
         if: always()
+        shell: bash
         run: |
-          if [ -x /usr/bin/ccache ]; then
-            /usr/bin/ccache -s
+          if command -v ccache >/dev/null 2>&1; then
+            ccache -s
           else
-            echo "::warning::ccache is not installed in the build container"
+            echo "::warning::ccache is not installed"
           fi
 
   misra:
@@ -95,9 +107,10 @@ jobs:
     env:
       MISRA_IMAGE: ghcr.io/cognipilot/cognipilot-workspace:latest
       CMAKE_PREFIX_PATH: /opt/toolchains
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           path: cerebri
 
@@ -114,58 +127,33 @@ jobs:
             west-
 
       - name: Initialize and build compile_commands.json
+        shell: bash
         run: |
+          set -euo pipefail
           docker run --rm \
             --user 0:0 \
+            --entrypoint /bin/bash \
             -v "$GITHUB_WORKSPACE:/workspace" \
             -w /workspace/cerebri \
             -e HOME=/root \
             -e CMAKE_PREFIX_PATH=/opt/toolchains \
             -e SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
             -e GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt \
-            "$MISRA_IMAGE" bash -euo pipefail -c '
-              set -euo pipefail
-              apt-get update -qq
-              apt-get install -y -qq ca-certificates git
-              update-ca-certificates
-
-              export PATH="/root/.local/bin:/github/home/.local/bin:$PATH"
-              export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
-              export GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt
-
-              python3 -m pip install --user --break-system-packages poetry
-              command -v poetry
-              poetry --version
-
-              west init -l .
-              west update
-              ./scripts/cyecca_install
-              west build -p always -b mr_canhubk3/s32k344 app/b3rb \
-                -- -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-            '
+            "$MISRA_IMAGE" \
+            -lc "set -euo pipefail; export PATH=/root/.local/bin:$PATH; python3 -m pip install --user --break-system-packages poetry; poetry --version; west init -l .; west update; ./scripts/cyecca_install; west build -p always -b mr_canhubk3/s32k344 app/b3rb -- -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
 
       - name: Run cppcheck MISRA analysis
+        shell: bash
         run: |
+          set -euo pipefail
           docker run --rm \
             --user 0:0 \
+            --entrypoint /bin/bash \
             -v "$GITHUB_WORKSPACE:/workspace" \
             -w /workspace/cerebri \
             -e HOME=/root \
-            "$MISRA_IMAGE" bash -euo pipefail -c '
-              apt-get update -qq
-              apt-get install -y -qq cppcheck
-              cppcheck \
-                --project=build/compile_commands.json \
-                --addon=misra \
-                --inline-suppr \
-                --suppressions-list=tools/misra/suppressions.txt \
-                -i zephyr -i modules -i build \
-                --error-exitcode=0 \
-                --xml --xml-version=2 \
-                2> misra-report.xml
-              echo "### MISRA — mr_canhubk3/s32k344, app/b3rb" >> "$GITHUB_STEP_SUMMARY"
-              grep -o 'id="[^"]*"' misra-report.xml | sort | uniq -c | sort -rn >> "$GITHUB_STEP_SUMMARY" || true
-            '
+            "$MISRA_IMAGE" \
+            -lc "set -euo pipefail; nix shell nixpkgs#cppcheck --command cppcheck --project=build/compile_commands.json --addon=misra --inline-suppr --suppressions-list=tools/misra/suppressions.txt -i zephyr -i modules -i build --error-exitcode=0 --xml --xml-version=2 2> misra-report.xml; echo '### MISRA — mr_canhubk3/s32k344, app/b3rb' >> '$GITHUB_STEP_SUMMARY'; grep -o 'id=\"[^\"]*\"' misra-report.xml | sort | uniq -c | sort -rn >> '$GITHUB_STEP_SUMMARY' || true"
 
       - name: Upload report
         if: always()
