@@ -11,22 +11,31 @@ on:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    container: ghcr.io/cognipilot/cognipilot-workspace:latest
     env:
       CMAKE_PREFIX_PATH: /opt/toolchains
       CCACHE_DIR: /ccache
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           path: cerebri
 
       - name: Install build dependencies
+        shell: bash
         run: |
-          apt-get update -qq
-          apt-get install -y -qq ccache
-          echo "/usr/bin" >> "$GITHUB_PATH"
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            ca-certificates \
+            ccache \
+            git \
+            python3 \
+            python3-pip
+          sudo update-ca-certificates
+          command -v ccache
           test -x /usr/bin/ccache
+          test -f /etc/ssl/certs/ca-certificates.crt
 
       - name: Cache west modules
         uses: actions/cache@v4
@@ -52,8 +61,19 @@ jobs:
 
       - name: Initialize
         working-directory: cerebri
+        shell: bash
         run: |
-          export PATH="/github/home/.local/bin:$PATH"
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+          export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+          export GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt
+
+          python3 -m pip install --user --break-system-packages poetry west
+          command -v poetry
+          poetry --version
+          command -v west
+          west --version
+
           west init -l .
           west update
           ./scripts/cyecca_install
@@ -63,33 +83,39 @@ jobs:
 
       - name: Format Check
         working-directory: cerebri
+        shell: bash
         run: |
-          export PATH="/github/home/.local/bin:$PATH"
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
           west format -c
 
       - name: Twister Tests
         working-directory: cerebri
+        shell: bash
         run: |
-          export PATH="/github/home/.local/bin:$PATH"
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
           west test
 
       - name: Show ccache stats
         if: always()
+        shell: bash
         run: |
-          if [ -x /usr/bin/ccache ]; then
-            /usr/bin/ccache -s
+          if command -v ccache >/dev/null 2>&1; then
+            ccache -s
           else
-            echo "::warning::ccache is not installed in the build container"
+            echo "::warning::ccache is not installed"
           fi
 
   misra:
     runs-on: ubuntu-24.04
-    container: ghcr.io/cognipilot/cognipilot-workspace:latest
     env:
+      MISRA_IMAGE: ghcr.io/cognipilot/cognipilot-workspace:latest
       CMAKE_PREFIX_PATH: /opt/toolchains
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           path: cerebri
 
@@ -131,26 +157,39 @@ jobs:
 
       - name: Install cppcheck
         run: |
-          apt-get update -qq
-          apt-get install -y -qq cppcheck
+          set -euo pipefail
+          docker run --rm \
+            --user 0:0 \
+            --entrypoint /bin/bash \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            -w /workspace/cerebri \
+            -e HOME=/root \
+            -e CMAKE_PREFIX_PATH=/opt/toolchains \
+            -e SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+            -e GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt \
+            "$MISRA_IMAGE" \
+            -lc 'set -euo pipefail
+              export PATH=/root/.local/bin:$PATH
+              python3 -m pip install --user --break-system-packages poetry west
+              poetry --version
+              west --version
+              west init -l .
+              west update
+              ./scripts/cyecca_install
+              west build -b native_sim -d build -t dans -- -DCMAKE_EXPORT_COMPILE_COMMANDS=ON'
 
-      # No --rule-texts flag: tools/misra/rule-texts.txt does not exist yet
-      # (MISRA rule text is copyrighted — see tools/misra/README.md). Do not
-      # add one until that file is actually committed, or this step errors.
-      - name: cppcheck --addon=misra
-        working-directory: cerebri
+      - name: Run cppcheck MISRA analysis
+        shell: bash
         run: |
-          cppcheck \
-            --project=build/compile_commands.json \
-            --addon=misra \
-            --inline-suppr \
-            --suppressions-list=tools/misra/suppressions.txt \
-            -i zephyr -i modules -i build \
-            --error-exitcode=0 \
-            --xml --xml-version=2 \
-            2> misra-report.xml
-          echo "### MISRA — mr_canhubk3/s32k344, app/b3rb" >> "$GITHUB_STEP_SUMMARY"
-          grep -o 'id="[^"]*"' misra-report.xml | sort | uniq -c | sort -rn >> "$GITHUB_STEP_SUMMARY" || true
+          set -euo pipefail
+          docker run --rm \
+            --user 0:0 \
+            --entrypoint /bin/bash \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            -w /workspace/cerebri \
+            -e HOME=/root \
+            "$MISRA_IMAGE" \
+            -lc "set -euo pipefail; nix shell nixpkgs#cppcheck --command cppcheck --project=build/compile_commands.json --addon=misra --inline-suppr --suppressions-list=tools/misra/suppressions.txt --xml --xml-version=2 2>misra-report.xml"
 
       - name: Upload report
         if: always()
