@@ -57,6 +57,8 @@ jobs:
           west init -l .
           west update
           ./scripts/cyecca_install
+          python3 -m pip install --user --break-system-packages \
+            -r ../zephyr/scripts/requirements.txt
 
       - name: Format Check
         working-directory: cerebri
