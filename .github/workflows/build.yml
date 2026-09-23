@@ -92,6 +92,10 @@ jobs:
           ./scripts/cyecca_install
           python3 -m pip install --user --break-system-packages \
             -r ../zephyr/scripts/requirements.txt
+          # nanopb's generator needs protobuf and grpcio-tools; Zephyr's own
+          # requirements do not include them.
+          python3 -m pip install --user --break-system-packages \
+            -r ../modules/lib/nanopb/requirements.txt
           # Host tools + ARM toolchain only. Every hardware target here is ARM;
           # native_sim uses the host gcc. Omitting -t downloads every arch.
           west sdk install -d /opt/toolchains -t arm-zephyr-eabi
@@ -213,6 +217,10 @@ jobs:
           ./scripts/cyecca_install
           python3 -m pip install --user --break-system-packages \
             -r ../zephyr/scripts/requirements.txt
+          # nanopb's generator needs protobuf and grpcio-tools; Zephyr's own
+          # requirements do not include them.
+          python3 -m pip install --user --break-system-packages \
+            -r ../modules/lib/nanopb/requirements.txt
           # Host tools + ARM toolchain only (see the build job).
           west sdk install -d /opt/toolchains -t arm-zephyr-eabi
 
