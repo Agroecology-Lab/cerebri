@@ -68,9 +68,11 @@ jobs:
           export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
           export GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt
 
-          python3 -m pip install --user --break-system-packages poetry
+          python3 -m pip install --user --break-system-packages poetry west
           command -v poetry
           poetry --version
+          command -v west
+          west --version
 
           west init -l .
           west update
@@ -140,7 +142,15 @@ jobs:
             -e SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
             -e GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt \
             "$MISRA_IMAGE" \
-            -lc "set -euo pipefail; export PATH=/root/.local/bin:$PATH; python3 -m pip install --user --break-system-packages poetry; poetry --version; west init -l .; west update; ./scripts/cyecca_install; west build -p always -b mr_canhubk3/s32k344 app/b3rb -- -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+            -lc 'set -euo pipefail
+              export PATH=/root/.local/bin:$PATH
+              python3 -m pip install --user --break-system-packages poetry west
+              poetry --version
+              west --version
+              west init -l .
+              west update
+              ./scripts/cyecca_install
+              west build -b native_sim -d build -t dans -- -DCMAKE_EXPORT_COMPILE_COMMANDS=ON'
 
       - name: Run cppcheck MISRA analysis
         shell: bash
@@ -153,7 +163,7 @@ jobs:
             -w /workspace/cerebri \
             -e HOME=/root \
             "$MISRA_IMAGE" \
-            -lc "set -euo pipefail; nix shell nixpkgs#cppcheck --command cppcheck --project=build/compile_commands.json --addon=misra --inline-suppr --suppressions-list=tools/misra/suppressions.txt -i zephyr -i modules -i build --error-exitcode=0 --xml --xml-version=2 2> misra-report.xml; echo '### MISRA — mr_canhubk3/s32k344, app/b3rb' >> '$GITHUB_STEP_SUMMARY'; grep -o 'id=\"[^\"]*\"' misra-report.xml | sort | uniq -c | sort -rn >> '$GITHUB_STEP_SUMMARY' || true"
+            -lc "set -euo pipefail; nix shell nixpkgs#cppcheck --command cppcheck --project=build/compile_commands.json --addon=misra --inline-suppr --suppressions-list=tools/misra/suppressions.txt --xml --xml-version=2 2>misra-report.xml"
 
       - name: Upload report
         if: always()
