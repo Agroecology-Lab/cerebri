@@ -26,14 +26,26 @@ jobs:
       - name: Install build dependencies
         run: |
           apt-get update -qq
-          apt-get install -y -qq ccache python3-pip
-          python3 -m pip install --break-system-packages --user poetry
+          apt-get install -y -qq \
+            ca-certificates \
+            ccache \
+            git \
+            python3-pip
+
+          update-ca-certificates
+
+          python3 -m pip install --break-system-packages poetry
+          export PATH="/root/.local/bin:/usr/local/bin:$PATH"
+
+          command -v poetry
+          poetry --version
+
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           echo "/usr/bin" >> "$GITHUB_PATH"
+
           mkdir -p /workspace
           chmod 0777 /workspace
           test -x /usr/bin/ccache
-          "$HOME/.local/bin/poetry" --version
 
       - name: Cache west modules
         uses: actions/cache@v4
@@ -43,8 +55,9 @@ jobs:
             modules
             tools
             zephyr
-          key: west-${{ hashFiles('cerebri/west.yml') }}
+          key: west-v2-${{ hashFiles('cerebri/west.yml') }}
           restore-keys: |
+            west-v2-
             west-
 
       - name: Cache ccache
@@ -60,7 +73,7 @@ jobs:
       - name: Initialize
         working-directory: cerebri
         run: |
-          export PATH="$HOME/.local/bin:$PATH"
+          export PATH="/root/.local/bin:/usr/local/bin:$PATH"
           west init -l .
           west update
           ./scripts/cyecca_install
@@ -68,13 +81,13 @@ jobs:
       - name: Format Check
         working-directory: cerebri
         run: |
-          export PATH="$HOME/.local/bin:$PATH"
+          export PATH="/root/.local/bin:/usr/local/bin:$PATH"
           west format -c
 
       - name: Twister Tests
         working-directory: cerebri
         run: |
-          export PATH="$HOME/.local/bin:$PATH"
+          export PATH="/root/.local/bin:/usr/local/bin:$PATH"
           west test
 
       - name: Show ccache stats
@@ -88,11 +101,6 @@ jobs:
 
   misra:
     runs-on: ubuntu-24.04
-    # Do not use a job-level container here. GitHub mounts JavaScript action
-    # runtimes into container jobs, but the workspace image cannot execute
-    # those runtimes (upload-artifact fails with ENOENT for /__e/node20/bin/node).
-    # Run the analysis in the workspace image explicitly and keep the runner
-    # available for checkout, cache, and artifact actions.
     env:
       MISRA_IMAGE: ghcr.io/cognipilot/cognipilot-workspace:latest
       CMAKE_PREFIX_PATH: /opt/toolchains
@@ -110,8 +118,9 @@ jobs:
             modules
             tools
             zephyr
-          key: west-${{ hashFiles('cerebri/west.yml') }}
+          key: west-v2-${{ hashFiles('cerebri/west.yml') }}
           restore-keys: |
+            west-v2-
             west-
 
       - name: Initialize and build compile_commands.json
@@ -121,17 +130,29 @@ jobs:
             -v "$GITHUB_WORKSPACE:/workspace" \
             -w /workspace/cerebri \
             -e CMAKE_PREFIX_PATH=/opt/toolchains \
-            "$MISRA_IMAGE" bash -lc '
-              export PATH="$HOME/.local/bin:$PATH"
+            "$MISRA_IMAGE" bash -euxo pipefail -lc '
+              export PATH="/root/.local/bin:/usr/local/bin:$PATH"
+
               apt-get update -qq
-              apt-get install -y -qq python3-pip
-              python3 -m pip install --break-system-packages --user poetry
-              echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+              apt-get install -y -qq \
+                ca-certificates \
+                git \
+                python3-pip
+
+              update-ca-certificates
+
+              python3 -m pip install --break-system-packages poetry
+
+              command -v poetry
+              poetry --version
+
               mkdir -p /workspace
               chmod 0777 /workspace
+
               west init -l .
               west update
               ./scripts/cyecca_install
+
               west build -p always -b mr_canhubk3/s32k344 app/b3rb \
                 -- -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
             '
