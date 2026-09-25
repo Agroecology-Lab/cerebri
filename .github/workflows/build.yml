@@ -81,11 +81,14 @@ jobs:
           export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
           export GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt
 
-          python3 -m pip install --user --break-system-packages poetry west
+          python3 -m pip install --user --break-system-packages \
+            poetry west imgtool
           command -v poetry
           poetry --version
           command -v west
           west --version
+          command -v imgtool
+          imgtool --version
 
           west init -l .
           west update
@@ -207,10 +210,13 @@ jobs:
           export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
           export GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt
 
-          python3 -m pip install --user --break-system-packages poetry west
+          python3 -m pip install --user --break-system-packages \
+            poetry west imgtool
           command -v poetry
           command -v west
           west --version
+          command -v imgtool
+          imgtool --version
 
           west init -l .
           west update
