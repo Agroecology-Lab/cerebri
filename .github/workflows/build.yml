@@ -88,7 +88,8 @@ jobs:
           command -v west
           west --version
           command -v imgtool
-          imgtool --version
+          imgtool -h >/dev/null
+          python3 -c 'from importlib.metadata import version; print("imgtool", version("imgtool"))'
 
           west init -l .
           west update
@@ -216,7 +217,8 @@ jobs:
           command -v west
           west --version
           command -v imgtool
-          imgtool --version
+          imgtool -h >/dev/null
+          python3 -c 'from importlib.metadata import version; print("imgtool", version("imgtool"))'
 
           west init -l .
           west update
