@@ -1,7 +1,6 @@
 # Cerebri
 
-[![Build](https://github.com/CogniPilot/cerebri/actions/workflows/build.yml/badge.svg)](https://github.com/CogniPilot/cerebri/actions/workflows/build.yml)
-
+[![Build](https://github.com/Agroecology-Lab/cerebri/actions/workflows/build.yml/badge.svg)](https://github.com/Agroecology-Lab/cerebri/actions/workflows/build.yml)
 See [documentation](https://cognipilot.org/).
 
 
