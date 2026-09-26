@@ -9,6 +9,19 @@
 
 #include <cerebri/core/geofence.h>
 
+/**
+ * @brief Test whether a point lies inside a polygon using planar coordinates.
+ *
+ * Uses the PNPOLY ray-crossing algorithm. Results for points exactly on a
+ * polygon edge are unspecified.
+ *
+ * @param poly    Vertices in order; do not repeat the first vertex at the end.
+ * @param n_verts Number of vertices; must be >= 3.
+ * @param test    Point to test.
+ *
+ * @retval true  test is inside poly.
+ * @retval false test is outside poly, n_verts < 3, or poly is NULL.
+ */
 bool geofence_point_in_polygon(const struct geofence_point *poly,
 				size_t n_verts,
 				struct geofence_point test)
