@@ -1,0 +1,16 @@
+# Copyright (c) 2026 Agroecology Lab
+# SPDX-License-Identifier: Apache-2.0
+menuconfig CEREBRI_CORE_GEOFENCE
+  bool "Enable geofence point-in-polygon check"
+  help
+    This option enables the geofence library: a native-C, MISRA-checked
+    point-in-polygon test (PNPOLY) used to detect fence breaches. No
+    dynamic allocation, no dependencies beyond libc double arithmetic.
+
+if CEREBRI_CORE_GEOFENCE
+
+module = CEREBRI_CORE_GEOFENCE
+module-str = core_geofence
+source "subsys/logging/Kconfig.template.log_config"
+
+endif # CEREBRI_CORE_GEOFENCE
