@@ -2,3 +2,4 @@
 
 add_subdirectory_ifdef(CONFIG_CEREBRI_CORE_WORKQUEUES workqueues)
 add_subdirectory_ifdef(CONFIG_CEREBRI_CORE_COMMON common)
+add_subdirectory_ifdef(CONFIG_CEREBRI_CORE_GEOFENCE geofence)

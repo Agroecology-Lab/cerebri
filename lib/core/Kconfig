@@ -5,5 +5,6 @@ menu "Core"
 
 rsource "workqueues/Kconfig"
 rsource "common/Kconfig"
+rsource "geofence/Kconfig"
 
 endmenu
