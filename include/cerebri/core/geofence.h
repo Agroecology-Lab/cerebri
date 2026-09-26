@@ -47,8 +47,8 @@ struct geofence_point {
  * @retval false test is outside poly, n_verts < 3, or poly is NULL.
  */
 bool geofence_point_in_polygon(const struct geofence_point *poly,
-				size_t n_verts,
-				struct geofence_point test);
+                              size_t n_verts,
+                              struct geofence_point test);
 
 #ifdef __cplusplus
 }
