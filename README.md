@@ -7,7 +7,7 @@ See [documentation](https://cognipilot.org/).
 
 # Cerebri Roadmap
 
-Fork target: [NXP FRDM-A-S32K358](https://www.nxp.com/design/design-center/development-boards-and-designs/FRDM-A-S32K358) on Zephyr, acting as a hardware-separated
+Fork target: [BBAI64](https://docs.zephyrproject.org/latest/boards/beagle/beaglebone_ai64/doc/index.html) ARM Cortex-R5F, up to 1.0 GHz, 3 lockstep-capable dual-core clusters  on [Zephyr](https://docs.zephyrproject.org/latest/boards/beagle/beaglebone_ai64/doc/index.html), acting as a hardware-separated
 safety core between the ROS 2 host and the ODrive/CAN actuators — the
 same role panda plays in openpilot (host sets intent, MCU enforces limits
 and can override it independently).
@@ -30,6 +30,7 @@ and can override it independently).
 
 ## Notes 
 
+* Alt slower 240Mhz [NXP FRDM-A-S32K358](https://www.nxp.com/design/design-center/development-boards-and-designs/FRDM-A-S32K358)
 Safety and Testing
 
 * openpilot observes [ISO26262](https://en.wikipedia.org/wiki/ISO_26262) guidelines, see [SAFETY.md](https://github.com/commaai/openpilot/blob/master/docs/SAFETY.md) for more details.
