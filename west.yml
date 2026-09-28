@@ -34,7 +34,7 @@ manifest:
           - segger
     - name: zros
       remote: cognipilot
-      revision: 843348bca3a15e914914b90057369b9616302e20 # main 10/27/25
+      revision: 3f80b3ba8803abc02ad7382cc027658b05c07ca6 # main 09/18/26
       path: modules/lib/zros
     - name: cyecca
       remote: cognipilot
