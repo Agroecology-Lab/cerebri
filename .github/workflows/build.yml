@@ -58,9 +58,9 @@ jobs:
             modules
             tools
             zephyr
-          key: west-${{ hashFiles('cerebri/west.yml') }}
+          key: west-v1-${{ hashFiles('cerebri/west.yml') }}
           restore-keys: |
-            west-
+            west-v1-
 
       - name: Cache ccache
         uses: actions/cache@v4
@@ -200,9 +200,9 @@ jobs:
             modules
             tools
             zephyr
-          key: west-${{ hashFiles('cerebri/west.yml') }}
+          key: west-v1-${{ hashFiles('cerebri/west.yml') }}
           restore-keys: |
-            west-
+            west-v1-
 
       - name: Initialize
         working-directory: cerebri
