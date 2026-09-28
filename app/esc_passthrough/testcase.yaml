@@ -16,7 +16,7 @@
 # the console on /dev/ttyUSB0.
 
 common:
-  tags: esc passthrough usb protocol
+  tags: esc-passthrough-usb-protocol
 
 tests:
   # USB Protocol tests - pytest-based, simulates AM32 configurator

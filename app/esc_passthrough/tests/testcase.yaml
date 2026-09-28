@@ -23,7 +23,7 @@
 #     -DCONFIG_TEST_HARDWARE=y -p && west flash -r jlink
 
 common:
-  tags: esc passthrough
+  tags: esc-passthrough
   min_ram: 32
 
 tests:
@@ -58,4 +58,3 @@ tests:
       regex:
         - "PROJECT EXECUTION SUCCESSFUL"
     timeout: 120
-
