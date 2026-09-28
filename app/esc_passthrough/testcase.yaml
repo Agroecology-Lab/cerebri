@@ -22,7 +22,7 @@ tests:
   # USB Protocol tests - pytest-based, simulates AM32 configurator
   # Builds the MAIN app and tests MSP + 4-way interface over USB CDC
   esc_passthrough.usb_protocol:
-    tags: hardware usb protocol pytest
+    tags: hardware,usb,protocol,pytest
     platform_allow:
       - vmu_rt1170/mimxrt1176/cm7
     harness: pytest
