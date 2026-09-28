@@ -110,13 +110,14 @@ jobs:
           # native_sim uses the host gcc. Omitting -t downloads every arch.
           west sdk install -d /opt/toolchains -t arm-zephyr-eabi
 
-      - name: Format Check
+      - name: Format (autofix)
         working-directory: cerebri
         shell: bash
         run: |
           set -euo pipefail
           export PATH="$HOME/.local/bin:$PATH"
-          west format -c
+          # Format in place so subsequent build/test steps use the fixed files.
+          west format
 
       - name: Twister Tests
         working-directory: cerebri
