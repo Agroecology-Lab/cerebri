@@ -17,9 +17,9 @@ manifest:
 
   projects:
     - name: zephyr
-      remote: cognipilot
+      remote: zephyrproject-rtos
       west-commands: scripts/west-commands.yml
-      revision: c12cbf41a4c16c3f4acd2a42c4019ebff84f7951 # main 28-9-26
+      revision: main
       import:
         - name-allowlist:
           - nanopb
