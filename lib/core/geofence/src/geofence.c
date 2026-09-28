@@ -23,8 +23,8 @@
  * @retval false test is outside poly, n_verts < 3, or poly is NULL.
  */
 bool geofence_point_in_polygon(const struct geofence_point *poly,
-			       size_t n_verts,
-			       struct geofence_point test)
+				       size_t n_verts,
+				       struct geofence_point test)
 {
 	bool inside = false;
 
@@ -39,7 +39,7 @@ bool geofence_point_in_polygon(const struct geofence_point *poly,
 				const double x_intersect = (poly[j].x - poly[i].x) *
 								   (test.y - poly[i].y) /
 								   (poly[j].y - poly[i].y) +
-							   poly[i].x;
+								   poly[i].x;
 
 				if (test.x < x_intersect) {
 					inside = !inside;
